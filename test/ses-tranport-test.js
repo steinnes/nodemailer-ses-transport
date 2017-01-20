@@ -25,6 +25,7 @@ MockBuilder.prototype.createReadStream = function () {
     return this.message;
 };
 
+
 describe('SES Transport Tests', function () {
     it('Should expose version number', function () {
         var client = sesTransport();
@@ -60,7 +61,7 @@ describe('SES Transport Tests', function () {
             done();
         });
     });
-    
+
     it('Should use region in messageId', function (done) {
         var client = sesTransport({
             AWSAccessKeyID: 'AWSACCESSKEY',
@@ -184,5 +185,30 @@ describe('SES Transport Tests', function () {
                 done();
             });
         });
+    });
+
+    it('Passes sesParams forward into sendRawEmail', function(done) {
+        var client = sesTransport({
+            AWSAccessKeyID: 'AWSACCESSKEY',
+            AWSSecretKey: 'AWS/Secret/key',
+            sesParams: {
+                ConfigurationSetName: 'test-config-set-01'
+            }
+        });
+        sinon.stub(client.ses, 'sendRawEmail').yields(null, {
+            MessageId: 'abc'
+        });
+        client.send({
+            data: {},
+            message: new MockBuilder({
+                from: 'test@valid.sender',
+                to: 'test@valid.recipient'
+            }, 'message')
+        }, function (err, data) {
+            expect(err).to.not.exist;
+            expect(data.messageId).to.equal('abc@us-east-1.amazonses.com');
+            expect(client.ses.sendRawEmail.args[0][0].ConfigurationSetName).to.equal('test-config-set-01');
+        });
+        done();
     });
 });
